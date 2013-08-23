@@ -27,28 +27,56 @@ JSComposer.Utils = (function() {
     }
 
     function setSelectOptions(s, allow_null, options) {
-        console.log("Removing options...");
-        while (s.length > 0) s.remove(0);
-        console.log("Removed options...");
-        if (allow_null) {
-            var null_option = makeElement('option', {'text':'Select one...', 'value':null});
-            s.add(null_option);
+        var curr        = s.getElementsByTagName('option'),
+            create      = undefined,
+            has         = undefined,
+            del         = undefined,
+            i           = 0,
+            l           = curr.length;
+
+        if (l == 0 && allow_null) {
+            s.add(makeElement('option', {'text':'Select one...','value':null}));
         }
+
         if (typeof options === "object" &&
             options.length !== undefined) {
-            console.log("ARRAY OPTIONS");
-            for (var i = 0; i < options.length; ++i) {
-                var option = makeElement('option', {'text':options[i],'value':options[i]});
-                s.add(option);
-            }
+            create = function() {
+                for (var i = 0, l = options.length; i < l; ++i) {
+                    var key = options[i],
+                        o   = makeElement('option', {'text':key,'value':key});
+                    s.add(o);
+                }
+            };
+            has = function(key) { return options.indexOf(key) >= 0; };
+            del = function(key) { var index = options.indexOf(key); options.splice(index, 1); };
         } else {
-            console.log("OBJECT OPTIONS");
-            console.log(options);
-            for (var k in options) {
-                var option = makeElement('option', {'text':options[k],'value':k});
-                s.add(option);
+            create = function() {
+                for (var key in options) {
+                    if (!options.hasOwnProperty(key)) { continue; }
+                    var o = makeElement('option', {'text':options[key],'value':key});
+                    s.add(o);
+                }
+            };
+            has = function(key) { return options.hasOwnProperty(key); };
+            del = function(key) { delete options[key]; };
+        }
+
+        for (i = 0; i < curr.length; ++i) {
+            var key = curr[i].value;
+            console.log("Option Key: ", key);
+            if (allow_null && key === null) { continue; }
+            if (has(key)) {
+                del(key);
+            } else {
+                s.removeChild(curr[i]);
+                i--;
             }
         }
+
+        create();
+
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.log("Created Select: ", s);
     }
 
     function setSelectValue(s, value) {
@@ -64,7 +92,7 @@ JSComposer.Utils = (function() {
 
     function getSelectValue(s, value) {
         var i = s.selectedIndex;
-        return s.options[i].value;
+        return i === -1 ? undefined : s.options[i].value;
     }
 
     function applyNestedProperties(o, properties) {
@@ -799,9 +827,6 @@ JSComposer.ObjectField = (function(){
         }
 
         return a;
-    };
-
-    ObjectField.prototype.OnChange = function() {
     };
 
     function ObjectTypeField(type_desc, value) {
