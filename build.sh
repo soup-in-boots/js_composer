@@ -3,13 +3,13 @@
 VERSION="0.0.1"
 SRC_DIR="lib"
 DEST="js_composer_${VERSION}.js"
-FIELD_ORDER="StaticField TextField PasswordField NumberField IntegerField SelectField BooleanField OrderField StructField ObjectField ListField TypeDescField"
+FIELD_ORDER="OfInstance StaticInstance StringInstance PasswordInstance NumberInstance IntegerInstance SelectInstance BooleanInstance OrderInstance ObjectInstance ArrayInstance TypeDescInstance"
 FIELDS=""
 for field in $FIELD_ORDER
 do
-    FIELDS="${FIELDS} Field/${field}.js"
+    FIELDS="${FIELDS} Instance/${field}.js"
 done
-FILES="Utils.js Field.js Entry.js ${FIELDS} Form.js Form/*.js"
+FILES="tv4.min.js Utils.js Schema.js Instance.js Entry.js ${FIELDS} Form.js"
 
 echo '' > ${DEST}
 
