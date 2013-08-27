@@ -315,7 +315,8 @@ JSComposer.Instance = (function() {
     Instance.Schema = {};
 
     // Resolve Schema: incorporate references and valid
-    // types from multiple layers into a single schema
+    // types from multiple layers into a single schema,
+    // identifying potential constructors along the way
     Instance.ResolveSchema = function(schema, current, type_merge) {
         if (typeof current === 'undefined') {
             current = {};
@@ -332,11 +333,16 @@ JSComposer.Instance = (function() {
                 value: []
             });
         }
+
+        // Enclosed function for repeated operation
         function add_constructor(uri, cons) {
             if (current.constructors.hasOwnProperty(uri)) return;
             current.constructors[uri] = cons;
             current.cons_order.push(uri);
         }
+
+        // Incorporate identified constructors from
+        // lower levels
         if (typeof schema.constructors !== 'undefined') {
             for (var k in schema.constructors) {
                 if (!schema.constructors.hasOwnProperty) continue;
@@ -346,7 +352,8 @@ JSComposer.Instance = (function() {
 
         type_merge = JSComposer.Utils.ldef(type_merge, true);
 
-        console.log("RESOLVING SCHEMA: ", schema);
+        // Parse keys in this schema and incorporate into current
+        // TODO: break up this logic just a wee bit (mmm, s'ghetti)
         for (var key in schema) {
             switch (key) {
                 case "$ref":
@@ -437,9 +444,15 @@ JSComposer.Instance = (function() {
             current.type.length === 1) {
             current.type = current.type[0];
         }
-        if (typeof current.type === 'string' ||
-            typeof current.type === 'undefined') {
+        if (typeof current.type === 'string') {
             add_constructor(current.type, Instance.Objects[current.type]);
+        } else if (typeof current.oneOf !== 'undefined') {
+            var cons = Instance.Objects['oneOf'];
+            add_constructor('oneOf', cons);
+        } else if (typeof current.type === 'undefined') {
+            var uri     = JSComposer.Schema.URI("#/definitions/label"),
+                cons    = Instance.Objects[uri];
+            add_constructor(uri, cons);
         } else {
             console.log("[JSComposer.Instance.ResolveSchema]","Multitype Field",current.type);
             throw "disallowed_multitype_field";
@@ -506,6 +519,10 @@ JSComposer.Entry = (function() {
             'key':      JSComposer.Utils.makeElement('div', {'className':'key field'}),
             'value':    JSComposer.Utils.makeElement('div', {'className':'value field'})
         };
+        this.schema = {
+            'key':      key_desc,
+            'value':    val_desc
+        };
         //console.log("[Entry] Invoking instance: ", key, " :: ", key_desc);
         console.log("[Entry] Invoking instance: ", key, " :: ", key_desc);
         console.log("[Entry] Invoking instance: ", value, " :: ", val_desc);
@@ -534,6 +551,18 @@ JSComposer.Entry = (function() {
         return this.fields.value;
     }
 
+    Entry.prototype.SetValueSchema = function(schema, value) {
+        if (schema === this.schema.value) {
+            return;
+        }
+
+        this.fields.value.Destroy()
+        var instance = JSComposer.Instance.CreateInstance(this.context, this.parent, schema, value);
+        instance.Render(this.elements.value);
+        this.fields.value = instance;
+        this.schema.value = schema;
+    }
+
     Entry.prototype.OnKeyChange = function() {
     }
 
@@ -552,40 +581,68 @@ JSComposer.Entry = (function() {
 (function() {
     if (typeof window.JSComposer === 'undefined') window.JSComposer = {};
 
-    function OfInstance(context, parent, schema, value) {
-        JSComposer.Instance.apply(this, arguments);
-    }
-
-    OfInstance.prototype = new JSComposer.Instance();
-    OfInstance.prototype.constructor = OfInstance;
-
-    OfInstance.Incorporate = function(instance, schema) {
-    }
-
     function OneOfInstance(context, parent, schema, value) {
-        OfInstance.apply(this, arguments);
+        JSComposer.Instance.apply(this, arguments);
+
+        this.options = this.GetOptions();
+        var $self = this,
+            type = undefined,
+            option = undefined;
+
+        if (typeof value !== 'undefined') {
+            for (var i = 0, l = this.oneOf.length; i < l; ++i) {
+                if (tv4.validate(value, this.oneOf[i])) {
+                    type = this.oneOf[i];
+                    option = i;
+                    break;
+                }
+            }
+        }
+
+        if (typeof type === 'undefined') {
+            type = this.oneOf[0];
+            option = 0;
+        }
+
+        JSComposer.Utils.applyClass(this.elements.ctr, 'entry');
+        this.entry = new JSComposer.Entry(this.context, this, {'enum':this.options}, type, option.toString(), value);
+        this.entry.OnKeyChange = JSComposer.Utils.appendFunction(this.entry.OnKeyChange, function() { $self.OnKeyChange(); });
     }
 
-    OneOfInstance.prototype = new OfInstance();
+    OneOfInstance.prototype = new JSComposer.Instance();
     OneOfInstance.prototype.constructor = OneOfInstance;
+    Object.defineProperty(OneOfInstance.prototype, 'super', JSComposer.Instance);
 
-    function AnyOfInstance(context, parent, schema, value) {
-        OfInstance.apply(this, arguments);
+    OneOfInstance.prototype.Render = function(target) {
+        this.entry.Render(this.elements.ctr);
+        JSComposer.Instance.prototype.Render.call(this, target);
+    };
+
+    OneOfInstance.prototype.OnKeyChange = function() {
+        var key = this.entry.GetKey(),
+            schema = this.oneOf[key];
+
+        this.entry.SetValueSchema(schema, this.entry.GetValue());
     }
 
-    AnyOfInstance.prototype = new OfInstance();
-    AnyOfInstance.prototype.constructor = AnyOfInstance;
+    OneOfInstance.prototype.GetOptions = function() {
+        var options = {},
+            l = this.oneOf.length,
+            i = 0;
 
-    function AllOfInstance(context, parent, schema, value) {
-        OfInstance.apply(this, arguments);
+        for (; i < l; ++i) {
+            var s = this.oneOf[i];
+            console.log("Got Schema: ", this.oneOf[i]);
+            options[i] = JSComposer.Utils.ldef(s.title, s.id, s.type, i);
+        }
+
+        console.log("Got Options: ", options);
+
+        return options;
     }
-
-    AllOfInstance.prototype = new OfInstance();
-    AllOfInstance.prototype.constructor = AllOfInstance;
 
     JSComposer.OneOfInstance = OneOfInstance;
-    JSComposer.AnyOfInstance = AnyOfInstance;
-    JSComposer.AllOfInstance = AllOfInstance;
+    JSComposer.Instance.RegisterInstance('oneOf',  OneOfInstance);
 }());
 //var Instance   = require('Instance'),
 //    JSComposer.Utils   = require('JSComposer.Utils');
@@ -614,7 +671,7 @@ JSComposer.StaticInstance = (function() {
         return this.value;
     }
 
-    JSComposer.Instance.RegisterInstance(JSComposer.Schema.Ref('#/definitions/label')["$ref"], StaticInstance);
+    JSComposer.Instance.RegisterInstance(JSComposer.Schema.URI('#/definitions/label'), StaticInstance);
 
     return StaticInstance;
 }());
@@ -1193,22 +1250,29 @@ JSComposer.ObjectInstance = (function(){
     };
 
     ObjectInstance.prototype.FindEntry = function(key) {
-        var i = 0,
-            l = this.entries.length;
+        for (var k in this.entries) {
+            if (!this.entries.hasOwnProperty(k)) continue;
+            var entries = this.entries[k],
+                l = entries.length,
+                i = 0;
 
-        for (i = 0; i < l; ++i) {
-            if (this.entries[i].GetKey() === key) return this.entries[i].GetValueInstance();
+            console.log("Checking ", k, " entries:", entries);
+            for (i = 0; i < l; ++i) {
+                if (entries[i].GetKey() === key) return entries[i];
+            }
         }
-
         return undefined;
     };
 
     ObjectInstance.prototype.OnChange = function(type, source, entry) {
         if (type === 'additionalProperties' &&
             source === 'key') {
-            this.freeAdditionalKey(entry.GetKeyInstance().prevValue);
-            this.useAdditionalKey(entry.GetKeyInstance().currValue);
+            var prev = entry.GetKeyInstance().prevValue,
+                curr = entry.GetKeyInstance().currValue;
+            this.freeAdditionalKey(prev);
+            this.useAdditionalKey(curr);
             this.updateAdditionalOptions();
+            entry.SetValueSchema(this.additionalPropertys[curr]);
         }
     }
 
