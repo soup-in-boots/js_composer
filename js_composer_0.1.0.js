@@ -265,6 +265,10 @@ JSComposer.Utils = (function() {
         return {'$ref':uri};
     }
 
+    function LoadRawSchema(uri, schema) {
+        tv4.addSchema(uri, schema);
+    }
+
     function LoadSchema(uri) {
         // 1. Handle already loaded case
         if (uri.match(/#$/) === null) {
@@ -277,8 +281,7 @@ JSComposer.Utils = (function() {
         http.open("GET", uri, false);
         http.send(null);
 
-
-        tv4.addSchema(uri, JSON.parse(http.responseText));
+        LoadRawSchema(uri, JSON.parse(http.responseText));
     };
 
     function FetchSchema(uri) {
@@ -288,6 +291,7 @@ JSComposer.Utils = (function() {
     JSComposer.Schema = {
         Fetch: FetchSchema,
         Load: LoadSchema,
+        LoadRaw: LoadRawSchema,
         Ref: Ref,
         URI: URI
     };
@@ -335,10 +339,15 @@ JSComposer.Instance = (function() {
         }
 
         // Enclosed function for repeated operation
-        function add_constructor(uri, cons) {
+        function add_constructor(uri, cons, front) {
+            front = JSComposer.Utils.ldef(front, false);
             if (current.constructors.hasOwnProperty(uri)) return;
             current.constructors[uri] = cons;
-            current.cons_order.push(uri);
+            if (front) {
+                current.cons_order.unshift(uri);
+            } else {
+                current.cons_order.push(uri);
+            }
         }
 
         // Incorporate identified constructors from
@@ -379,6 +388,8 @@ JSComposer.Instance = (function() {
                         for (var i = 0, l = schema[key].length; i < l; ++i) {
                             current.oneOf.push(Instance.ResolveSchema(schema[key][i]));
                         }
+                        var cons = Instance.Objects['oneOf'];
+                        add_constructor('oneOf', cons, true);
                     }
                     break;
                 case "allOf":
@@ -407,11 +418,14 @@ JSComposer.Instance = (function() {
                         case 'string':
                             if (type_merge) {
                                 current[key] = [current[key]];
-                            } else {
+                            } else if (current[key] !== schema[key]) {
                                 console.log('[JSComposer.Instance.ResolveSchema]', 'invaid type merger', current, '::', schema);
                                 throw "invalid_type_merger";
                             }
-                            if (typeof schema[key] === 'string') {
+
+                            if (schema[key] === current[key]) {
+                                // No need to do anything; types are the same
+                            } else if (typeof schema[key] === 'string') {
                                 if (current[key].indexOf(schema[key]) < 0) current[key].push(schema[key]);
                             } else {
                                 for (var i = 0, l = schema[key].length; i < l; ++i) {
@@ -440,15 +454,26 @@ JSComposer.Instance = (function() {
             }
         }
 
+        if (typeof current.oneOf !== 'undefined') {
+            var anyOf = typeof current.anyOf === 'undefined' ? [] : current.anyOf,
+                allOf = typeof current.allOf === 'undefined' ? [] : current.allOf,
+                of = anyOf.concat(allOf);
+
+            for (var i = 0, l = current.oneOf.length; i < l; ++i) {
+                for (var index = 0, length = of.length; index < length; ++index) {
+                    console.log("PRE-TITLE:", current.oneOf[i].title, of[index].title);
+                    current.oneOf[i] = Instance.ResolveSchema(of[index], current.oneOf[i], false);
+                    console.log("POST-TITLE:", current.oneOf[i].title, of[index].title);
+                }
+            }
+        }
+
         if (typeof current.type === 'object' &&
             current.type.length === 1) {
             current.type = current.type[0];
         }
         if (typeof current.type === 'string') {
             add_constructor(current.type, Instance.Objects[current.type]);
-        } else if (typeof current.oneOf !== 'undefined') {
-            var cons = Instance.Objects['oneOf'];
-            add_constructor('oneOf', cons);
         } else if (typeof current.type === 'undefined') {
             var uri     = JSComposer.Schema.URI("#/definitions/label"),
                 cons    = Instance.Objects[uri];
@@ -481,7 +506,7 @@ JSComposer.Instance = (function() {
         if (schema.cons_order.length > 0) {
             var uri = schema.cons_order[0],
                 cons = schema.constructors[uri];
-            console.log("Found Constructor: ", uri, " :: ", cons, " :: ", schema.cons_order, " :: ", schema);
+            //console.log("Found Constructor: ", uri, " :: ", cons, " :: ", schema.cons_order, " :: ", schema);
             return new cons(context, parent, schema, value);
         }
 
@@ -653,19 +678,13 @@ JSComposer.StaticInstance = (function() {
         JSComposer.Instance.apply(this, arguments);
 
         var text_content = JSComposer.Utils.ldef(this.title, value, '');
-        this.elements.text = JSComposer.Utils.makeElement("div", {"className": "value field"});
-        JSComposer.Utils.setText(this.elements.text, text_content);
+        JSComposer.Utils.setText(this.elements.ctr, text_content);
 
         this.value = value;
     };
 
     StaticInstance.prototype = new JSComposer.Instance();
     StaticInstance.prototype.constructor = StaticInstance;
-
-    StaticInstance.prototype.Render = function(target) {
-        this.elements.ctr.appendChild(this.elements.text);
-        target.appendChild(this.elements.ctr);
-    };
 
     StaticInstance.prototype.GetValue = function() {
         return this.value;
@@ -874,11 +893,10 @@ JSComposer.SelectInstance = (function() {
 }());
 if (window.JSComposer === undefined) window.JSComposer = {};
 JSComposer.BooleanInstance = (function() {
-    function BooleanInstance(schema, value) {
-        schema.options = {"true":"True","false":"False"};
-        schema.allow_null = false;
+    function BooleanInstance(context, parent, schema, value) {
+        schema.enum = {"true":"True","false":"False"};
         value = value === true ? "true" : "false";
-        JSComposer.SelectInstance.call(this, schema, value);
+        JSComposer.SelectInstance.call(this, context, parent, schema, value);
     }
 
     BooleanInstance.prototype = new JSComposer.SelectInstance();
@@ -1087,7 +1105,7 @@ JSComposer.ObjectInstance = (function(){
 
         ctr.appendChild(header);
         ctr.appendChild(content);
-        ctr.appendChild(footer);
+        if (type !== 'properties') ctr.appendChild(footer);
         this.elements.body.appendChild(ctr);
 
         this.elements.sections[type] = content;
