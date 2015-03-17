@@ -1,0 +1,20 @@
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="bootstrap.css" />
+        <!-- <script src="lib/require.js"></script>
+        <script src="js_composer_0.1.0.js"></script > -->
+        <script data-main="lib/JSComposer.js" src="lib/require.js"></script>
+    </head>
+    <body>
+        <div id="js_composer">
+        </div>
+        <script type="text/javascript">
+            require(['JSComposer', 'JSComposer/Schema', 'JSComposer/Form'], function(JSComposer, Schema, Form) {
+                Schema.Load('http://json-schema.org/schema');
+                var d = document.getElementById('js_composer');
+                window.form = new Form(Schema.Ref('#', 'http://json-schema.org/schema'), {});
+                window.form.Render(d);
+            })
+        </script>
+    </body>
+</html>
