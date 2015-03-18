@@ -39,7 +39,7 @@
         </div>
 
         <h1>
-<a id="jscomposer" class="anchor" href="#jscomposer" aria-hidden="true"><span class="octicon octicon-link"></span></a>JSComposer</h1>
+<a id="jscomposer" class="anchor" href="#jscomposer" aria-hidden="true"><span class="octicon octicon-link"></span></a>JScomposer</h1>
 
 <p>Generate HTML forms for generating strongly-type JSON objects! Use JSON-Schema (<a href="http://json-schema.org">http://json-schema.org</a>) to define the structure of your objects, then tell JSComposer to build a form using one of your object schemas. It's even easier than it sounds.</p>
 
@@ -51,6 +51,8 @@
 <p>JSComposer uses CSS classes and HTML frameworks defined by Bootstrap to arrange the forms it generates, making it very simple to style (just include a copy of bootstrap.css for a nice, basic look).</p>
 
 <p>JSComposer can handle the JSON Schema attributes "anyOf", "allOf", and "oneOf" with ease by "resolving" all referenced schema at the time of instantiation. This means you can easily reuse existing schema definitions with slight modifications, such as changing a title, or increasing the minimum value for an integer.</p>
+
+<p>JSComposer also resolves references across one or more schemas. Additional schemas can be loaded explicitly using <code>JSComposer.Schema.LoadSchema</code>, or implicitly by using a <code>$ref</code> schema to refer to a new schema URI.</p>
 
 <p>More importantly, JSComposer is <em>extensible</em>. If you're not satisfied with the built-in handling of a particular schema or otherwise require customization, it's as simple as extending the base JSComposer.Instance class with your own functionality and registering it for a URI (or several). A good example of this would be a "date" field:</p>
 
@@ -91,7 +93,13 @@ SelectInstance <span class="pl-k">=</span> <span class="pl-s3">require</span>(<s
 <span class="pl-s3">MyDate</span>.<span class="pl-sc">prototype</span>.<span class="pl-en">GetValue</span> <span class="pl-k">=</span> <span class="pl-st">function</span>() {
     <span class="pl-s">var</span> a <span class="pl-k">=</span> [<span class="pl-v">this</span>.year_selector, <span class="pl-v">this</span>.month_selector, <span class="pl-v">this</span>.day_selector];
     <span class="pl-k">return</span> a.<span class="pl-s3">join</span>(<span class="pl-s1"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>);
-}</pre></div>
+}
+
+<span class="pl-c">// Register the new object constructor</span>
+JSComposer.Instance.RegisterInstance(<span class="pl-s1"><span class="pl-pds">"</span>http://mysite.com/myschema#/definitions/date<span class="pl-pds">"</span></span>, MyDate);
+
+<span class="pl-c">// Now any time JSComposer.Instance.CreateInstance({"$ref":"http://mysite.com/myschema#/definitions/date"})</span>
+<span class="pl-c">// is invoked, your object will be used!</span></pre></div>
 
 <p>You only have to worry about exporting two functions: <code>Render(target)</code> and <code>GetValue()</code>, so go wild! (in the case of Render, you can use the default <code>Instance</code> function assuming all of your additional elements are added to <code>this.elements.ctr</code> ahead of time)</p>
 
@@ -136,7 +144,7 @@ SelectInstance <span class="pl-k">=</span> <span class="pl-s3">require</span>(<s
                     <span class="pl-s1"><span class="pl-pds">"</span>email_updates<span class="pl-pds">"</span></span>
                 ]
             },
-            form    <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">JSComposer.Form</span>(schema, <span class="pl-s1"><span class="pl-pds">"</span>Look! A Form!<span class="pl-pds">"</span></span>);
+            form    <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">JSComposer.Form</span>(schema, {});
 
         form.Render(d);
     });</pre></div>
