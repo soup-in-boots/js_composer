@@ -11,6 +11,8 @@ JSComposer uses CSS classes and HTML frameworks defined by Bootstrap to arrange 
 
 JSComposer can handle the JSON Schema attributes "anyOf", "allOf", and "oneOf" with ease by "resolving" all referenced schema at the time of instantiation. This means you can easily reuse existing schema definitions with slight modifications, such as changing a title, or increasing the minimum value for an integer.
 
+JSComposer also resolves references across one or more schemas. Additional schemas can be loaded explicitly using `JSComposer.Schema.LoadSchema`, or implicitly by using a `$ref` schema to refer to a new schema URI.
+
 More importantly, JSComposer is *extensible*. If you're not satisfied with the built-in handling of a particular schema or otherwise require customization, it's as simple as extending the base JSComposer.Instance class with your own functionality and registering it for a URI (or several). A good example of this would be a "date" field:
 
 ```javascript
@@ -52,6 +54,12 @@ MyDate.prototype.GetValue = function() {
     var a = [this.year_selector, this.month_selector, this.day_selector];
     return a.join('/');
 }
+
+// Register the new object constructor
+JSComposer.Instance.RegisterInstance("http://mysite.com/myschema#/definitions/date", MyDate);
+
+// Now any time JSComposer.Instance.CreateInstance({"$ref":"http://mysite.com/myschema#/definitions/date"})
+// is invoked, your object will be used!
 ```
 
 You only have to worry about exporting two functions: `Render(target)` and `GetValue()`, so go wild! (in the case of Render, you can use the default `Instance` function assuming all of your additional elements are added to `this.elements.ctr` ahead of time)
