@@ -1,0 +1,200 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>JSComposer by fauxsoup</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="javascripts/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="stylesheets/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+      <div id="header">
+        <nav>
+          <li class="fork"><a href="https://github.com/fauxsoup/js_composer">View On GitHub</a></li>
+          <li class="downloads"><a href="https://github.com/fauxsoup/js_composer/zipball/master">ZIP</a></li>
+          <li class="downloads"><a href="https://github.com/fauxsoup/js_composer/tarball/master">TAR</a></li>
+          <li class="title">DOWNLOADS</li>
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>JSComposer</h1>
+          <p>Generate HTML forms for generating strongly-type JSON objects!</p>
+          <hr>
+          <span class="credits left">Project maintained by <a href="https://github.com/fauxsoup">fauxsoup</a></span>
+          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/michigangraham">mattgraham</a></span>
+        </div>
+
+        <h1>
+<a id="jscomposer" class="anchor" href="#jscomposer" aria-hidden="true"><span class="octicon octicon-link"></span></a>JSComposer</h1>
+
+<p>Generate HTML forms for generating strongly-type JSON objects! Use JSON-Schema (<a href="http://json-schema.org">http://json-schema.org</a>) to define the structure of your objects, then tell JSComposer to build a form using one of your object schemas. It's even easier than it sounds.</p>
+
+<h1>
+<a id="why-jscomposer" class="anchor" href="#why-jscomposer" aria-hidden="true"><span class="octicon octicon-link"></span></a>Why JSComposer?</h1>
+
+<p>JSComposer is built using pure JavaScript. Its only dependency is tv4, which it uses for form validation and schema management. It uses the AMD/Require.JS module structure (with each module corresponding to an object).</p>
+
+<p>JSComposer uses CSS classes and HTML frameworks defined by Bootstrap to arrange the forms it generates, making it very simple to style (just include a copy of bootstrap.css for a nice, basic look).</p>
+
+<p>JSComposer can handle the JSON Schema attributes "anyOf", "allOf", and "oneOf" with ease by "resolving" all referenced schema at the time of instantiation. This means you can easily reuse existing schema definitions with slight modifications, such as changing a title, or increasing the minimum value for an integer.</p>
+
+<p>More importantly, JSComposer is <em>extensible</em>. If you're not satisfied with the built-in handling of a particular schema or otherwise require customization, it's as simple as extending the base JSComposer.Instance class with your own functionality and registering it for a URI (or several). A good example of this would be a "date" field:</p>
+
+<div class="highlight highlight-javascript"><pre>JSComposer <span class="pl-k">=</span> <span class="pl-s3">require</span>(<span class="pl-s1"><span class="pl-pds">'</span>JSComposer<span class="pl-pds">'</span></span>);
+<span class="pl-c">// Alternatively...</span>
+Instance <span class="pl-k">=</span> <span class="pl-s3">require</span>(<span class="pl-s1"><span class="pl-pds">'</span>JSComposer/Instance<span class="pl-pds">'</span></span>);
+<span class="pl-c">// Or even</span>
+SelectInstance <span class="pl-k">=</span> <span class="pl-s3">require</span>(<span class="pl-s1"><span class="pl-pds">'</span>JSComposer/Instance/SelectInstance<span class="pl-pds">'</span></span>);
+
+<span class="pl-s">var</span> my_schema <span class="pl-k">=</span> {
+    <span class="pl-s1"><span class="pl-pds">"</span>id<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s1"><span class="pl-pds">"</span>http://mysite.com/myschema#<span class="pl-pds">"</span></span>,
+    <span class="pl-s1"><span class="pl-pds">"</span>definitions<span class="pl-pds">"</span></span><span class="pl-k">:</span> {
+        <span class="pl-c">// ...</span>
+        <span class="pl-s1"><span class="pl-pds">"</span>date<span class="pl-pds">"</span></span><span class="pl-k">:</span> {<span class="pl-s1"><span class="pl-pds">"</span>type<span class="pl-pds">"</span></span><span class="pl-k">:</span><span class="pl-s1"><span class="pl-pds">"</span>string<span class="pl-pds">"</span></span>,<span class="pl-s1"><span class="pl-pds">"</span>format<span class="pl-pds">"</span></span><span class="pl-k">:</span><span class="pl-s1"><span class="pl-pds">"</span>[0-9]{4}/[0-9]{2}/[0-9]{2}<span class="pl-pds">"</span></span>}     <span class="pl-c">// There are better regexes, but at least I'm using ISO</span>
+    }
+};
+
+<span class="pl-st">function</span> <span class="pl-en">MyDate</span>(<span class="pl-vpf">context</span>, <span class="pl-vpf">parent</span>, <span class="pl-vpf">type_desc</span>, <span class="pl-vpf">value</span>) {
+    Instance.<span class="pl-s3">apply</span>(<span class="pl-v">this</span>, arguments);        <span class="pl-c">// Chain the constructor; it does things for you, like giving you a container to render into</span>
+
+    <span class="pl-c">// The default instance for 'enum' is a select box, so lets make a bunch of those because this is an example.</span>
+    <span class="pl-c">// Be as fancy as you want, otherwise.</span>
+    <span class="pl-v">this</span>.year_selector  <span class="pl-k">=</span> Instance.CreateInstance({<span class="pl-s1"><span class="pl-pds">'</span>enum<span class="pl-pds">'</span></span><span class="pl-k">:</span>[<span class="pl-s1"><span class="pl-pds">'</span>1980<span class="pl-pds">'</span></span>, <span class="pl-s1"><span class="pl-pds">'</span>1981<span class="pl-pds">'</span></span>, <span class="pl-s1"><span class="pl-pds">'</span>1982<span class="pl-pds">'</span></span>, ...]});
+    <span class="pl-v">this</span>.month_selector <span class="pl-k">=</span> Instance.CreateInstance({<span class="pl-s1"><span class="pl-pds">'</span>enum<span class="pl-pds">'</span></span><span class="pl-k">:</span>[<span class="pl-s1"><span class="pl-pds">'</span>01<span class="pl-pds">'</span></span>,<span class="pl-s1"><span class="pl-pds">'</span>02<span class="pl-pds">'</span></span>,<span class="pl-s1"><span class="pl-pds">'</span>03<span class="pl-pds">'</span></span>, ...]});
+    <span class="pl-v">this</span>.day_selector   <span class="pl-k">=</span> Instance.CreateInstance({<span class="pl-s1"><span class="pl-pds">'</span>enum<span class="pl-pds">'</span></span><span class="pl-k">:</span>[<span class="pl-s1"><span class="pl-pds">'</span>01<span class="pl-pds">'</span></span>,<span class="pl-s1"><span class="pl-pds">'</span>02<span class="pl-pds">'</span></span>,<span class="pl-s1"><span class="pl-pds">'</span>03<span class="pl-pds">'</span></span>, ...]});
+}
+
+<span class="pl-s3">MyDate</span>.<span class="pl-sc">prototype</span> <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">JSComposer.Instance</span>();
+<span class="pl-s3">MyDate</span>.<span class="pl-sc">prototype</span>.<span class="pl-en">constructor</span> <span class="pl-k">=</span> MyDate;
+
+<span class="pl-s3">MyDate</span>.<span class="pl-sc">prototype</span>.<span class="pl-en">Render</span> <span class="pl-k">=</span> <span class="pl-st">function</span>(<span class="pl-vpf">target</span>) {
+    <span class="pl-v">this</span>.<span class="pl-sc">elements</span>.ctr.<span class="pl-s3">appendChild</span>(<span class="pl-v">this</span>.year_selector);
+    <span class="pl-v">this</span>.<span class="pl-sc">elements</span>.ctr.<span class="pl-s3">appendChild</span>(<span class="pl-v">this</span>.year_selector);
+    <span class="pl-v">this</span>.<span class="pl-sc">elements</span>.ctr.<span class="pl-s3">appendChild</span>(<span class="pl-v">this</span>.year_selector);
+    target.<span class="pl-s3">appendChild</span>(<span class="pl-v">this</span>.<span class="pl-sc">elements</span>.ctr);
+}
+
+<span class="pl-s3">MyDate</span>.<span class="pl-sc">prototype</span>.<span class="pl-en">GetValue</span> <span class="pl-k">=</span> <span class="pl-st">function</span>() {
+    <span class="pl-s">var</span> a <span class="pl-k">=</span> [<span class="pl-v">this</span>.year_selector, <span class="pl-v">this</span>.month_selector, <span class="pl-v">this</span>.day_selector];
+    <span class="pl-k">return</span> a.<span class="pl-s3">join</span>(<span class="pl-s1"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>);
+}</pre></div>
+
+<p>You only have to worry about exporting two functions: <code>Render(target)</code> and <code>GetValue()</code>, so go wild! (in the case of Render, you can use the default <code>Instance</code> function assuming all of your additional elements are added to <code>this.elements.ctr</code> ahead of time)</p>
+
+<h1>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span class="octicon octicon-link"></span></a>Usage</h1>
+
+<p>EXTREMELY Basic Usage:</p>
+
+<div class="highlight highlight-javascript"><pre>    <span class="pl-s3">require</span>(<span class="pl-s1"><span class="pl-pds">'</span>JSComposer<span class="pl-pds">'</span></span>, <span class="pl-st">function</span>(<span class="pl-vpf">JSComposer</span>) {
+        <span class="pl-s">var</span> d       <span class="pl-k">=</span> <span class="pl-s3">document</span>.<span class="pl-s3">getElementById</span>(<span class="pl-s1"><span class="pl-pds">'</span>jsc_form<span class="pl-pds">'</span></span>),
+            form    <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">JSComposer.Form</span>({<span class="pl-s1"><span class="pl-pds">'</span>type<span class="pl-pds">'</span></span><span class="pl-k">:</span><span class="pl-s1"><span class="pl-pds">'</span>string<span class="pl-pds">'</span></span>}, <span class="pl-s1"><span class="pl-pds">"</span>Look! A Form!<span class="pl-pds">"</span></span>);
+
+        form.Render(d);
+    });</pre></div>
+
+<p>Of course, you can be as complicated or as simple as you like. Consider this basic schema defining a user for your... I don't know... pet owners forum? Just look already.</p>
+
+<div class="highlight highlight-javascript"><pre>    <span class="pl-s3">require</span>(<span class="pl-s1"><span class="pl-pds">'</span>JSComposer<span class="pl-pds">'</span></span>, <span class="pl-st">function</span>(<span class="pl-vpf">JSComposer</span>) {
+        <span class="pl-s">var</span> d       <span class="pl-k">=</span> <span class="pl-s3">document</span>.<span class="pl-s3">getElementById</span>(<span class="pl-s1"><span class="pl-pds">'</span>jsc_form<span class="pl-pds">'</span></span>),
+            schema  <span class="pl-k">=</span> {
+                <span class="pl-s1"><span class="pl-pds">"</span>type<span class="pl-pds">"</span></span><span class="pl-k">:</span>             <span class="pl-s1"><span class="pl-pds">"</span>object<span class="pl-pds">"</span></span>,
+                <span class="pl-s1"><span class="pl-pds">"</span>title<span class="pl-pds">"</span></span><span class="pl-k">:</span>            <span class="pl-s1"><span class="pl-pds">"</span>User<span class="pl-pds">"</span></span>,
+                <span class="pl-s1"><span class="pl-pds">"</span>properties<span class="pl-pds">"</span></span><span class="pl-k">:</span>       {
+                    <span class="pl-s1"><span class="pl-pds">"</span>id<span class="pl-pds">"</span></span><span class="pl-k">:</span>               {<span class="pl-s1"><span class="pl-pds">"</span>type<span class="pl-pds">"</span></span><span class="pl-k">:</span><span class="pl-s1"><span class="pl-pds">"</span>string<span class="pl-pds">"</span></span>},
+                    <span class="pl-s1"><span class="pl-pds">"</span>password<span class="pl-pds">"</span></span><span class="pl-k">:</span>         {<span class="pl-s1"><span class="pl-pds">"</span>type<span class="pl-pds">"</span></span><span class="pl-k">:</span><span class="pl-s1"><span class="pl-pds">"</span>string<span class="pl-pds">"</span></span>},
+                    <span class="pl-s1"><span class="pl-pds">"</span>email_updates<span class="pl-pds">"</span></span><span class="pl-k">:</span>    {<span class="pl-s1"><span class="pl-pds">"</span>type<span class="pl-pds">"</span></span><span class="pl-k">:</span><span class="pl-s1"><span class="pl-pds">"</span>boolean<span class="pl-pds">"</span></span>},
+                    <span class="pl-s1"><span class="pl-pds">"</span>favorite_pets<span class="pl-pds">"</span></span><span class="pl-k">:</span>    {
+                        <span class="pl-s1"><span class="pl-pds">"</span>enum<span class="pl-pds">"</span></span><span class="pl-k">:</span>             [
+                            <span class="pl-s1"><span class="pl-pds">"</span>Cats<span class="pl-pds">"</span></span>,
+                            <span class="pl-s1"><span class="pl-pds">"</span>Dogs<span class="pl-pds">"</span></span>,
+                            <span class="pl-s1"><span class="pl-pds">"</span>Horses<span class="pl-pds">"</span></span>,
+                            <span class="pl-s1"><span class="pl-pds">"</span>Rabbits<span class="pl-pds">"</span></span>,
+                            <span class="pl-s1"><span class="pl-pds">"</span>Guinea Pigs<span class="pl-pds">"</span></span>,
+                            <span class="pl-s1"><span class="pl-pds">"</span>Mice<span class="pl-pds">"</span></span>,
+                            <span class="pl-s1"><span class="pl-pds">"</span>Rocks<span class="pl-pds">"</span></span>             <span class="pl-c">// Fine, Ricky. Rocks can be pets. Whatever.</span>
+                        ]
+                    }
+                },
+                <span class="pl-s1"><span class="pl-pds">"</span>required<span class="pl-pds">"</span></span><span class="pl-k">:</span>             [
+                    <span class="pl-s1"><span class="pl-pds">"</span>id<span class="pl-pds">"</span></span>,
+                    <span class="pl-s1"><span class="pl-pds">"</span>password<span class="pl-pds">"</span></span>,
+                    <span class="pl-s1"><span class="pl-pds">"</span>email_updates<span class="pl-pds">"</span></span>
+                ]
+            },
+            form    <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">JSComposer.Form</span>(schema, <span class="pl-s1"><span class="pl-pds">"</span>Look! A Form!<span class="pl-pds">"</span></span>);
+
+        form.Render(d);
+    });</pre></div>
+
+<p>Of course, these kinds of JSON Schema would be a pain to write on every page you needed them, so if your collection of schemas is getting large enough that you want to put it in its own schema file, you can easily refer to it! Simply create a reference to the schema definition (see the $ref property in JSON schema) and JSComposer will automatically load the schema for you! Hooray!</p>
+
+<div class="highlight highlight-javascript"><pre>    <span class="pl-s3">require</span>(<span class="pl-s1"><span class="pl-pds">'</span>JSComposer<span class="pl-pds">'</span></span>, <span class="pl-st">function</span>(<span class="pl-vpf">JSComposer</span>) {
+        <span class="pl-s">var</span> d       <span class="pl-k">=</span> <span class="pl-s3">document</span>.<span class="pl-s3">getElementById</span>(<span class="pl-s1"><span class="pl-pds">'</span>jsc_form<span class="pl-pds">'</span></span>),
+            form    <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">JSComposer.Form</span>(JSComposer.Schema.Ref(<span class="pl-s1"><span class="pl-pds">'</span>#/definitions/pet_owner<span class="pl-pds">'</span></span>, <span class="pl-s1"><span class="pl-pds">'</span>http://petownerparadiso.info/schema#<span class="pl-pds">'</span></span>), {});
+
+            <span class="pl-c">// {"$ref":"http://petownerparadiso.info/schema#/definitions/pet_owner"} works just as well</span>
+
+        form.Render(d);
+    });</pre></div>
+
+<p>Hell, you could use JSComposer to <em>build your schema</em>:</p>
+
+<div class="highlight highlight-javascript"><pre>    <span class="pl-s3">require</span>(<span class="pl-s1"><span class="pl-pds">'</span>JSComposer<span class="pl-pds">'</span></span>, <span class="pl-st">function</span>(<span class="pl-vpf">JSComposer</span>) {
+        <span class="pl-s">var</span> d       <span class="pl-k">=</span> <span class="pl-s3">document</span>.<span class="pl-s3">getElementById</span>(<span class="pl-s1"><span class="pl-pds">'</span>jsc_form<span class="pl-pds">'</span></span>),
+            form    <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">JSComposer.Form</span>(JSComposer.Schema.Ref(<span class="pl-s1"><span class="pl-pds">'</span>#<span class="pl-pds">'</span></span>, <span class="pl-s1"><span class="pl-pds">'</span>http://json-schema.org/schema#<span class="pl-pds">'</span></span>), {});
+
+        form.Render(d);
+    });</pre></div>
+
+<h1>
+<a id="uh-oh" class="anchor" href="#uh-oh" aria-hidden="true"><span class="octicon octicon-link"></span></a>Uh-oh</h1>
+
+<p>Ricky's insisting plants can be pets now. Ricky's a jerk. I don't even know how he got administrator access to the database. Regardless, it's getting to be a pain to update my schema definition every time he adds another pet type to the database. I wish there was some way to make this easier.</p>
+
+<p><em>Oh, wait!</em> There <em>is</em> a way! Instead of storing my <em>enumeration</em> of pet types directly in my schema, I can refer to another URL on my site that will query the database and produce a valid schema!</p>
+
+<div class="highlight highlight-javascript"><pre>    {
+        ...
+                    <span class="pl-s1"><span class="pl-pds">"</span>favorite_pets<span class="pl-pds">"</span></span><span class="pl-k">:</span>    {<span class="pl-s1"><span class="pl-pds">"</span>$ref<span class="pl-pds">"</span></span><span class="pl-k">:</span><span class="pl-s1"><span class="pl-pds">"</span>http://petownerparadiso.info/api/pet_types/schema#<span class="pl-pds">"</span></span>}
+        ...
+    }</pre></div>
+
+<p>And the return value from <code>http://petownerparadiso.info/api/pet_types/schema#</code> is:</p>
+
+<div class="highlight highlight-javascript"><pre>{
+    <span class="pl-s1"><span class="pl-pds">"</span>enum<span class="pl-pds">"</span></span><span class="pl-k">:</span>     [
+        <span class="pl-s1"><span class="pl-pds">"</span>Cats<span class="pl-pds">"</span></span>,
+        <span class="pl-s1"><span class="pl-pds">"</span>Dogs<span class="pl-pds">"</span></span>,
+        <span class="pl-s1"><span class="pl-pds">"</span>Horses<span class="pl-pds">"</span></span>,
+        <span class="pl-s1"><span class="pl-pds">"</span>Rabbits<span class="pl-pds">"</span></span>,
+        <span class="pl-s1"><span class="pl-pds">"</span>Guinea Pigs<span class="pl-pds">"</span></span>,
+        <span class="pl-s1"><span class="pl-pds">"</span>Mice<span class="pl-pds">"</span></span>,
+        <span class="pl-s1"><span class="pl-pds">"</span>Rocks<span class="pl-pds">"</span></span>,
+        <span class="pl-s1"><span class="pl-pds">"</span>Plants<span class="pl-pds">"</span></span>,
+        <span class="pl-s1"><span class="pl-pds">"</span>Snowmen<span class="pl-pds">"</span></span>
+    ]
+}</pre></div>
+
+<p>SERIOUSLY RICKY? Okay, there's NO way snowmen are pets. Quit messing around with my site!</p>
+      </section>
+
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+    
+  </body>
+</html>
